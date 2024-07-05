@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import Sound from 'react-native-sound';
 
 const TicTacToe = () => {
   const [board, setBoard] = useState(Array(9).fill(null));
   const [isXNext, setIsXNext] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
 
   const handlePress = (index: number) => {
     if (board[index] || calculateWinner(board)) {
@@ -43,14 +46,37 @@ const TicTacToe = () => {
     );
   };
 
+  const playWinnerSound = () => {
+    var winnerSound = new Sound('winner.mp3', Sound.MAIN_BUNDLE, (error) => {
+      if (error) {
+        console.log('failed to load the sound', error);
+        return;
+      }
+      winnerSound.play((success) => {
+        if (success) {
+          console.log('successfully finished playing');
+        } else {
+          console.log('playback failed due to audio decoding errors');
+        }
+      });
+    });
+  };
+
   const winner = calculateWinner(board);
   let status;
   if (winner) {
     status = `Winner: ${winner}`;
-    Alert.alert('Game Over', `Winner: ${winner}`, [{ text: 'OK', onPress: () => resetGame() }]);
+    setTimeout(() => {
+      setAlertMessage(`Winner: ${winner}`);
+      setModalVisible(true);
+      playWinnerSound();
+    }, 100);
   } else if (board.every(square => square !== null)) {
     status = 'Draw!';
-    Alert.alert('Game Over', 'Draw!', [{ text: 'OK', onPress: () => resetGame() }]);
+    setTimeout(() => {
+      setAlertMessage('Draw!');
+      setModalVisible(true);
+    }, 100);
   } else {
     status = `Next player: ${isXNext ? 'X' : 'O'}`;
   }
@@ -58,6 +84,7 @@ const TicTacToe = () => {
   const resetGame = () => {
     setBoard(Array(9).fill(null));
     setIsXNext(true);
+    setModalVisible(false);
   };
 
   return (
@@ -69,6 +96,25 @@ const TicTacToe = () => {
       <TouchableOpacity style={styles.resetButton} onPress={resetGame}>
         <Text style={styles.resetButtonText}>Reset Game</Text>
       </TouchableOpacity>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalText}>{alertMessage}</Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={resetGame}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -78,7 +124,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5FCFF',
+    backgroundColor: '#D6A2E8',
   },
   board: {
     width: '80%',
@@ -91,23 +137,49 @@ const styles = StyleSheet.create({
     height: '33.33%',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: '#333',
   },
   squareText: {
     fontSize: 32,
   },
   status: {
-    fontSize: 24,
+    fontSize: 22,
     marginBottom: 20,
   },
   resetButton: {
     marginTop: 20,
     padding: 10,
-    backgroundColor: '#007BFF',
+    backgroundColor: '#82589F',
     borderRadius: 5,
   },
   resetButtonText: {
+    color: '#FFF',
+    fontSize: 18,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: 300,
+    padding: 20,
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  modalText: {
+    fontSize: 20,
+    marginBottom: 20,
+  },
+  modalButton: {
+    padding: 10,
+    backgroundColor: '#007BFF',
+    borderRadius: 5,
+  },
+  modalButtonText: {
     color: '#FFF',
     fontSize: 18,
   },
