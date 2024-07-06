@@ -1,21 +1,53 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import Sound from 'react-native-sound';
 
-const TicTacToe = () => {
+type Props = {
+  route: {
+    params: {
+      player: 'X' | 'O';
+    };
+  };
+};
+
+const TicTacToe = ({ route }: Props) => {
+  const { player } = route.params;
   const [board, setBoard] = useState(Array(9).fill(null));
-  const [isXNext, setIsXNext] = useState(true);
+  const [isXNext, setIsXNext] = useState(player === 'X');
   const [modalVisible, setModalVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+
+  useEffect(() => {
+    if (!isXNext && !calculateWinner(board) && !board.every(square => square !== null)) {
+      const bestMove = getBestMove(board);
+      if (bestMove !== null) {
+        handlePress(bestMove);
+      }
+    }
+  }, [isXNext, board]);
 
   const handlePress = (index: number) => {
     if (board[index] || calculateWinner(board)) {
       return;
     }
-    const newBoard = board.slice();
+    const newBoard = [...board];
     newBoard[index] = isXNext ? 'X' : 'O';
     setBoard(newBoard);
     setIsXNext(!isXNext);
+
+    const winner = calculateWinner(newBoard);
+    if (winner) {
+      setTimeout(() => {
+        setAlertMessage(`Winner: ${winner}`);
+        setModalVisible(true);
+        playWinnerSound();
+      }, 100);
+    } else if (newBoard.every(square => square !== null)) {
+      setTimeout(() => {
+        setAlertMessage('Draw!');
+        setModalVisible(true);
+      }, 100);
+    }
   };
 
   const calculateWinner = (squares: Array<string | null>) => {
@@ -38,16 +70,8 @@ const TicTacToe = () => {
     return null;
   };
 
-  const renderSquare = (index: number) => {
-    return (
-      <TouchableOpacity style={styles.square} onPress={() => handlePress(index)}>
-        <Text style={styles.squareText}>{board[index]}</Text>
-      </TouchableOpacity>
-    );
-  };
-
   const playWinnerSound = () => {
-    var winnerSound = new Sound('winner.mp3', Sound.MAIN_BUNDLE, (error) => {
+    const winnerSound = new Sound('winner.mp3', Sound.MAIN_BUNDLE, (error) => {
       if (error) {
         console.log('failed to load the sound', error);
         return;
@@ -62,30 +86,76 @@ const TicTacToe = () => {
     });
   };
 
-  const winner = calculateWinner(board);
-  let status;
-  if (winner) {
-    status = `Winner: ${winner}`;
-    setTimeout(() => {
-      setAlertMessage(`Winner: ${winner}`);
-      setModalVisible(true);
-      playWinnerSound();
-    }, 100);
-  } else if (board.every(square => square !== null)) {
-    status = 'Draw!';
-    setTimeout(() => {
-      setAlertMessage('Draw!');
-      setModalVisible(true);
-    }, 100);
-  } else {
-    status = `Next player: ${isXNext ? 'X' : 'O'}`;
-  }
+  const renderSquare = (index: number) => {
+    return (
+      <TouchableOpacity style={styles.square} onPress={() => isXNext && handlePress(index)}>
+        <Text style={styles.squareText}>{board[index]}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const getBestMove = (newBoard: Array<string | null>) => {
+    let bestMove = null;
+    let bestValue = -Infinity;
+
+    for (let i = 0; i < newBoard.length; i++) {
+      if (newBoard[i] === null) {
+        newBoard[i] = 'O';
+        const moveValue = minimax(newBoard, 0, false);
+        newBoard[i] = null;
+
+        if (moveValue > bestValue) {
+          bestMove = i;
+          bestValue = moveValue;
+        }
+      }
+    }
+    return bestMove;
+  };
+
+  const minimax = (newBoard: Array<string | null>, depth: number, isMaximizing: boolean) => {
+    const winner = calculateWinner(newBoard);
+
+    if (winner === 'X') return -10;
+    if (winner === 'O') return 10;
+    if (newBoard.every(square => square !== null)) return 0;
+
+    if (isMaximizing) {
+      let bestValue = -Infinity;
+
+      for (let i = 0; i < newBoard.length; i++) {
+        if (newBoard[i] === null) {
+          newBoard[i] = 'O';
+          bestValue = Math.max(bestValue, minimax(newBoard, depth + 1, false));
+          newBoard[i] = null;
+        }
+      }
+      return bestValue;
+    } else {
+      let bestValue = Infinity;
+
+      for (let i = 0; i < newBoard.length; i++) {
+        if (newBoard[i] === null) {
+          newBoard[i] = 'X';
+          bestValue = Math.min(bestValue, minimax(newBoard, depth + 1, true));
+          newBoard[i] = null;
+        }
+      }
+      return bestValue;
+    }
+  };
 
   const resetGame = () => {
     setBoard(Array(9).fill(null));
-    setIsXNext(true);
+    setIsXNext(player === 'X');
     setModalVisible(false);
   };
+
+  const status = calculateWinner(board)
+    ? `Winner: ${calculateWinner(board)}`
+    : board.every(square => square !== null)
+      ? 'Draw!'
+      : `Next player: ${isXNext ? 'X' : 'O'}`;
 
   return (
     <View style={styles.container}>
