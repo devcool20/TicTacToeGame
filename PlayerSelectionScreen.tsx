@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import Sound from 'react-native-sound';
 
 type RootStackParamList = {
   PlayerSelection: undefined;
@@ -12,10 +13,35 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'PlayerSelec
 
 const PlayerSelectionScreen = () => {
   const navigation = useNavigation<NavigationProp>();
+  const introSoundRef = useRef<Sound | null>(null);
 
   const selectPlayer = (player: 'X' | 'O') => {
+    if (introSoundRef.current) {
+      introSoundRef.current.stop(() => {
+        introSoundRef.current?.release();
+      });
+    }
     navigation.navigate('Game', { player });
   };
+
+  useFocusEffect(
+    React.useCallback(() => {
+      introSoundRef.current = new Sound('intro.mp3', Sound.MAIN_BUNDLE, (error) => {
+        if (error) {
+          console.log('Failed to load the sound', error);
+          return;
+        }
+        introSoundRef.current?.setNumberOfLoops(-1);
+        introSoundRef.current?.play();
+      });
+
+      return () => {
+        introSoundRef.current?.stop(() => {
+          introSoundRef.current?.release();
+        });
+      };
+    }, [])
+  );
 
   return (
     <View style={styles.container}>
@@ -24,6 +50,9 @@ const PlayerSelectionScreen = () => {
         <TouchableOpacity style={styles.button} onPress={() => selectPlayer('X')}>
           <Text style={styles.buttonText}>X</Text>
         </TouchableOpacity>
+        <View style={styles.bw}>
+          <Text>--------------</Text>
+        </View>
         <TouchableOpacity style={styles.button} onPress={() => selectPlayer('O')}>
           <Text style={styles.buttonText}>O</Text>
         </TouchableOpacity>
@@ -55,6 +84,9 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#FFF',
     fontSize: 18,
+  },
+  bw: {
+    marginTop: 28,
   },
 });
 
