@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import Sound from 'react-native-sound';
+import { useFocusEffect } from '@react-navigation/native';
 
 type Props = {
   route: {
@@ -16,6 +17,26 @@ const TicTacToe = ({ route }: Props) => {
   const [isXNext, setIsXNext] = useState(player === 'X');
   const [modalVisible, setModalVisible] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
+
+  const backgroundSoundRef = useRef<Sound | null>(null);
+  const winSoundRef = useRef<Sound | null>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      backgroundSoundRef.current = new Sound('background.mp3', Sound.MAIN_BUNDLE, (error) => {
+        if (error) {
+          console.log('Failed to load the sound', error);
+          return;
+        }
+        backgroundSoundRef.current?.setNumberOfLoops(-1);
+        backgroundSoundRef.current?.play();
+      });
+
+      return () => {
+        backgroundSoundRef.current?.stop();
+      };
+    }, [])
+  );
 
   useEffect(() => {
     if (!isXNext && !calculateWinner(board) && !board.every(square => square !== null)) {
@@ -38,14 +59,15 @@ const TicTacToe = ({ route }: Props) => {
     const winner = calculateWinner(newBoard);
     if (winner) {
       setTimeout(() => {
-        setAlertMessage(`Winner: ${winner}`);
+        setAlertMessage(`Yohoooo ${winner} wins`);
         setModalVisible(true);
         playWinnerSound();
       }, 100);
     } else if (newBoard.every(square => square !== null)) {
       setTimeout(() => {
-        setAlertMessage('Draw!');
+        setAlertMessage('Thats a Draw!');
         setModalVisible(true);
+        playWinnerSound();
       }, 100);
     }
   };
@@ -71,14 +93,16 @@ const TicTacToe = ({ route }: Props) => {
   };
 
   const playWinnerSound = () => {
-    const winnerSound = new Sound('winner.mp3', Sound.MAIN_BUNDLE, (error) => {
+    winSoundRef.current = new Sound('winner.mp3', Sound.MAIN_BUNDLE, (error) => {
       if (error) {
         console.log('failed to load the sound', error);
         return;
       }
-      winnerSound.play((success) => {
+      backgroundSoundRef.current?.stop();
+      winSoundRef.current.play((success) => {
         if (success) {
           console.log('successfully finished playing');
+          backgroundSoundRef.current?.play();
         } else {
           console.log('playback failed due to audio decoding errors');
         }
@@ -180,7 +204,7 @@ const TicTacToe = ({ route }: Props) => {
               style={styles.modalButton}
               onPress={resetGame}
             >
-              <Text style={styles.modalButtonText}>OK</Text>
+              <Text style={styles.modalButtonText}>Play another one!</Text>
             </TouchableOpacity>
           </View>
         </View>

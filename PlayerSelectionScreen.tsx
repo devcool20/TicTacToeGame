@@ -45,7 +45,7 @@ const PlayerSelectionScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Choose Your Player</Text>
+      <Text style={styles.title}>Who's gonna make the first move?</Text>
       <View style={styles.buttonContainer}>
         <TouchableOpacity style={styles.button} onPress={() => selectPlayer('X')}>
           <Text style={styles.buttonText}>X</Text>
